@@ -17,14 +17,12 @@ class imapMailBox {
 	public $con;
 	private $mailCache;
 
-	public function __construct (
+	public function __construct (/*{{{*/
 		$conStr,
 		$conPrm
 	) {
-
 		$this->login ($conStr, $conPrm);
-
-	}
+	}/*}}}*/
 
 
 	function login(/*{{{*/
@@ -264,7 +262,7 @@ class imapMailBox {
 
 
 
-	public function getAttachments (
+	public function getAttachments (/*{{{*/
 		$mid
 	) {
 		if (! is_resource ($this->con)) throw new Exception ('Mailbox not opened');
@@ -280,9 +278,103 @@ class imapMailBox {
 		) $att[] = $data;
 
 		return $att;
+	}/*}}}*/
+
+	private function isHtml ($txt) {
+		$prmP = "(?:\s+.*?)?";
+		if ( preg_match (/*{{{*/
+			"/^\s*(?:<doctype{$prmP}>\s*)?<html{$prmP}>.*?<\/html>.*$/ims",
+			$txt
+		)) return true;/*}}}*/
+		if ( preg_match (/*{{{*/
+			"/^\s*<div{$prmP}>.*<\/div>\s*$/ims",
+			$txt
+		)) return true;/*}}}*/
+		return false;
 	}
 
+	public function getBody (/*{{{*/
+		$mid,
+		$format = 'txt'
+	) {
+		if (! is_resource ($this->con)) throw new Exception ('Mailbox not opened');
+		if (false === $mail = $this->mime_to_array ($mid)) return false;
 
+		switch (strtolower(trim($format))) { // Normalyze / check $format./*{{{*/
+		case 'txt':/*{{{*/
+		case 'text':
+			$format = 'txt';
+			break;/*}}}*/
+		case 'html':/*{{{*/
+		case 'htm':
+			$format = 'html';
+			break;/*}}}*/
+		default:/*{{{*/
+			throw new Exception (
+				"Unknown body format: {$format}"
+			);/*}}}*/
+		};/*}}}*/
+
+
+		$parts = array();
+		$bodyPart = null; // (Unknown).
+		$body = null;
+		foreach (
+			$mail
+			as $i => $data
+		) if (
+			$i !== 0 // Ignore header part.
+			&& @ $data['is_attachment'] === false // Not attachment.
+		) {
+
+			if (preg_match ( // Determine part and subpart índex:/*{{{*/
+				'/^([^.]+?)\\.([^.]+)$/', // Top-level subpart.
+				$i,
+				$matches
+			)) {
+				list ($foo, $part, $subpart) = $matches;
+			} else if (false === strpos ('.', $i)) { // Top-level part.
+				$part = $i;
+				$subpart = 0; // Use '0' to mean "not a subpart".
+			} else { // Non top-level subpart.
+				continue; // (Ignore).
+			};/*}}}*/
+
+			if (is_null ($bodyPart)) { // Body is first non-attachment part./*{{{*/
+				$bodyPart = $part;
+			} else if ($bodyPart != $part) continue;/*}}}*/
+
+			if ($subpart) {
+
+				$isHtml = $this->isHtml ($data['data']);
+
+				if ($format == 'txt') {/*{{{*/
+					if ($isHtml) {
+						$body = strip_tags($data['data']); // Fix buggy emails without text part.
+					} else return $data['data']; // That's what we want.
+				} else {
+					if (! $isHtml) {
+						if (strlen (trim ($data['data']))) {
+							$body = nl2br ($data['data']); // Minimal html default.
+						};
+					} else return $data['data']; // That's what we want.
+				};/*}}}*/
+
+			} else if (isset ($mail["{$part}.1"])) { // Multipart
+				continue;
+			} else { // No multipart.
+				return ($format == 'html')
+					? nl2br ($data['data'])
+					: $data['data']
+				;
+			};
+
+		};
+
+		// Return failback contents.
+		return $body;
+
+	}/*}}}*/
 
 
 
