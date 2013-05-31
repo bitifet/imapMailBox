@@ -2,7 +2,7 @@
 // imapMailBox.class.php
 // =====================
 //
-// Class to handle imap/pop3 email.
+// Class easily to handle imap/pop3 email.
 // Borrowed from (thanks to) Wil Barath's comment at phpdoc:
 // 	http://php.net/manual/es/intro.imap.php#96415
 //
@@ -16,6 +16,7 @@ class imapMailBox {
 	///private $con;
 	public $con;
 	private $mailCache;
+
 
 	public function __construct (/*{{{*/
 		$conStr,
@@ -261,7 +262,6 @@ class imapMailBox {
 	}/*}}}*/
 
 
-
 	public function getAttachments (/*{{{*/
 		$mid
 	) {
@@ -280,7 +280,44 @@ class imapMailBox {
 		return $att;
 	}/*}}}*/
 
-	private function isHtml ($txt) {
+
+	private function fixutf ($text) {/*{{{*/
+
+		$text .= ' '; // <Guorrkarround>
+
+		$srcenc = mb_detect_encoding(/*{{{*/
+			$text,
+			array (
+				'UTF-8',
+				'ISO-8859-15',
+				'ISO-8859-1',
+				'JIS',
+				'eucjp-win',
+				'sjis-win'
+			)
+		);/*}}}*/
+
+		$text = mb_convert_encoding ($text, 'UTF-8', $srcenc);
+
+		$text = substr($text, 0, -1); // <Guorrkarround>
+
+		// Miscellaneous (commonly good) replacements:/*{{{*/
+		$replacements = array (
+			chr(0xc2) . chr(0x92) => "'"
+		);
+		$text = str_replace (
+			array_keys ($replacements),
+			array_values ($replacements),
+			$text
+		);
+		/*}}}*/
+
+		return $text;
+
+	}/*}}}*/
+
+
+	private function isHtml ($txt) {/*{{{*/
 		$prmP = "(?:\s+.*?)?";
 		if ( preg_match (/*{{{*/
 			"/^\s*(?:<doctype{$prmP}>\s*)?<html{$prmP}>.*?<\/html>.*$/ims",
@@ -291,7 +328,8 @@ class imapMailBox {
 			$txt
 		)) return true;/*}}}*/
 		return false;
-	}
+	}/*}}}*/
+
 
 	public function getBody (/*{{{*/
 		$mid,
@@ -350,20 +388,20 @@ class imapMailBox {
 
 				if ($format == 'txt') {/*{{{*/
 					if ($isHtml) {
-						$body = strip_tags($data['data']); // Fix buggy emails without text part.
-					} else return $data['data']; // That's what we want.
+						is_null($body) && $body = html_entity_decode(strip_tags($data['data'])); // Fix buggy emails without text part.
+					} else $body = $data['data']; // That's what we want.
 				} else {
 					if (! $isHtml) {
 						if (strlen (trim ($data['data']))) {
-							$body = nl2br ($data['data']); // Minimal html default.
+							is_null($body) && $body = nl2br ($data['data']); // Minimal html default.
 						};
-					} else return $data['data']; // That's what we want.
+					} else $body = $data['data']; // That's what we want.
 				};/*}}}*/
 
 			} else if (isset ($mail["{$part}.1"])) { // Multipart
 				continue;
 			} else { // No multipart.
-				return ($format == 'html')
+				$body = ($format == 'html')
 					? nl2br ($data['data'])
 					: $data['data']
 				;
@@ -371,13 +409,17 @@ class imapMailBox {
 
 		};
 
-		// Return failback contents.
+		if (! mb_check_encoding ($body, 'utf-8')) {
+			$body = $this->fixutf($body);
+		};
+
 		return $body;
 
 	}/*}}}*/
 
 
 
+	// Untested:
 	function dele(/*{{{*/
 		$message
 	) {
