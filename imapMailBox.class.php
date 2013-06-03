@@ -77,6 +77,11 @@ class imapMailBox {
 		/*}}}*/
 
 		// Check for minimal parameters:/*{{{*/
+		if (is_string ($params)) try { // Accept json instead of array:
+			$params = (array) json_decode ($params);
+		} catch (Exception $e) {
+			throw new Exception ("Bad 'params' specification");
+		};
 		if (! strlen (@ $host)) throw new Exception (
 			"Host not specified"
 		);
