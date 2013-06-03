@@ -35,7 +35,7 @@ class imapMailBox {
 		// Get parameters from $account string:/*{{{*/
 		if (is_string ($account)) {
 			if (! preg_match (
-				'/^(?:(.*?)(:.*?)@)?(?:\{(.*?)(?::(\d+))?(?:\/(.*?))?\})(.*?)?$/',
+				'/^(?:(.*?)(?::(.*?))@)?(?:\{(.*?)(?::(\d+))?(?:\/(.*?))?\})(.*?)?$/',
 				$account,
 				$matches
 			)) throw new Exception (
@@ -101,7 +101,6 @@ class imapMailBox {
 		;
 		if ($strCon[0] !== '{') $strCon = "{{$strCon}}"; // Surround with '{}'.
 		/*}}}*/
-
 
 		// Try to connect:/*{{{*/
 		return is_resource (
