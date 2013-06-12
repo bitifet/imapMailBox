@@ -425,8 +425,8 @@ class imapMailBox {
 	public function getRaw(
 		$mid
 	) {
-		return imap_fetchheader($this->con, $mid)
-			. imap_body($this->con, $mid);
+		return imap_fetchheader($this->con, $mid, FT_PREFETCHTEXT | FT_INTERNAL | FT_UID)
+			. imap_body($this->con, $mid, FT_INTERNAL | FT_UID);
 	}
 
 	// Untested:
