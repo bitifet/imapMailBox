@@ -422,6 +422,12 @@ class imapMailBox {
 	}/*}}}*/
 
 
+	public function getRaw(
+		$mid
+	) {
+		return imap_fetchheader($this->con, $mid)
+			. imap_body($this->con, $mid);
+	}
 
 	// Untested:
 	function dele(/*{{{*/
