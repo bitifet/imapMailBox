@@ -135,6 +135,7 @@ class imapMailBox {
 			$range = "1:".$MC->Nmsgs;
 		}
 		$response = imap_fetch_overview($this->con,$range);
+		$result = array();
 		foreach ($response as $msg) {
 			$msgdata = array();
 			foreach (
@@ -324,7 +325,7 @@ class imapMailBox {
 	private function isHtml ($txt) {/*{{{*/
 		$prmP = "(?:\s+.*?)?";
 		if ( preg_match (/*{{{*/
-			"/^\s*(?:<doctype{$prmP}>\s*)?<html{$prmP}>.*?<\/html>.*$/ims",
+			"/^\s*(?:<!doctype{$prmP}>\s*)?<html{$prmP}>.*?<\/html>.*$/ims",
 			$txt
 		)) return true;/*}}}*/
 		if ( preg_match (/*{{{*/
@@ -437,6 +438,12 @@ class imapMailBox {
 		return(imap_delete($this->con,$message));
 	}/*}}}*/
 
+	function __destruct () {
+
+		imap_expunge($this->con);
+		imap_errors();
+
+	}
 
 };
 
