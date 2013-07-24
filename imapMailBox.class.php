@@ -108,8 +108,13 @@ class imapMailBox {
 		/*}}}*/
 
 		// Try to connect:/*{{{*/
+		if (false === $this->con = @ imap_open($strCon, $user, $pass, $options, $n_retries, $params)) {
+			list ($emsg) = imap_errors();
+			throw new Exception ($emsg);
+			return false;
+		};
 		return is_resource (
-			$this->con = @ imap_open($strCon, $user, $pass, $options, $n_retries, $params)
+			$this->con
 		);/*}}}*/
 
 	}/*}}}*/
